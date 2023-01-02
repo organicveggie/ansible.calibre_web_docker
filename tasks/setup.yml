@@ -1,0 +1,14 @@
+---
+- name: "Create Calibre Web config directory"
+  when: "not calibre_web_docker_use_volumes"
+  ansible.builtin.file:
+    name: "{{ calibre_web_docker_conf_dir }}"
+    state: "directory"
+    mode: "0770"
+    owner: "{{ calibre_web_docker_uid | default(omit) }}"
+    group: "{{ calibre_web_docker_gid | default(omit) }}"
+
+- name: "Create Calibre Web Docker volume"
+  when: "calibre_web_docker_use_volumes"
+  community.docker.docker_volume:
+    name: "{{ calibre_web_docker_volume_name }}"

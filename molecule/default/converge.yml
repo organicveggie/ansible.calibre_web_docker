@@ -1,8 +1,26 @@
 ---
-- name: Converge
-  hosts: all
-  gather_facts: false
-  tasks:
-    - name: "Include organicveggie.calibre_web_docker"
-      ansible.builtin.include_role:
-        name: "organicveggie.calibre_web_docker"
+- name: "Run common setup plays"
+  import_playbook: "../resources/playbooks/setup.yml"
+
+- name: "Converge execution"
+  hosts: "all"
+  become: true
+
+  vars:
+    calibre_web_docker_name: "calibre-test-container"
+    calibre_web_docker_volume_name: "calibre-test-volume"
+    calibre_web_docker_network_create: true
+    calibre_web_docker_network: "calibre-docker-test-network"
+    calibre_web_docker_book_dir: "/var/lib/books"
+    calibre_web_docker_hostname: "calibre-test-host"
+    calibre_web_docker_host_domain: "test-example.com"
+
+  pre_tasks:
+    - name: "Create placeholder directory for books"
+      ansible.builtin.file:
+        name: "{{ calibre_web_docker_book_dir }}"
+        state: "directory"
+        mode: "777"
+
+  roles:
+    - "organicveggie.calibre_web_docker"

@@ -1,2 +1,19 @@
 ---
-# tasks file for calibre_web_docker
+- name: "Run general setup"
+  ansible.builtin.import_tasks: "setup.yml"
+  tags:
+    - "calibre"
+    - "calibre:setup"
+
+- name: "Run network setup"
+  ansible.builtin.import_tasks: "network.yml"
+  tags:
+    - "calibre"
+    - "calibre:network"
+  when: "calibre_web_docker_network_create"
+
+- name: "Create container"
+  ansible.builtin.import_tasks: "container.yml"
+  tags:
+    - "calibre"
+    - "calibre:docker"

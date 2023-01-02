@@ -1,0 +1,12 @@
+---
+- name: "Create Docker network"
+  when: "calibre_web_docker_network_create"
+  community.docker.docker_network:
+    name: "{{ calibre_web_docker_network }}"
+    driver: "{{ calibre_web_docker_network_driver }}"
+    enable_ipv6: "{{ calibre_web_docker_network_enable_ipv6 }}"
+    internal: "{{ calibre_web_docker_network_internal }}"
+    scope: "{{ calibre_web_docker_network_scope }}"
+    ipam_config:
+      - subnet: "{{ calibre_web_docker_network_subnet }}"
+        gateway: "{{ calibre_web_docker_network_gateway }}"

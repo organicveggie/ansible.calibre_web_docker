@@ -1,0 +1,109 @@
+---
+- name: "Set fact describing config directory bind mount"
+  when: "not calibre_web_docker_use_volumes"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_config_mount:
+      - source: "{{ calibre_web_docker_conf_dir }}"
+        target: "/config"
+        type: "bind"
+
+- name: "Set fact describing config directory Docker volume"
+  when: "calibre_web_docker_use_volumes"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_config_mount:
+      - source: "{{ calibre_web_docker_volume_name }}"
+        target: "/config"
+        type: "volume"
+
+- name: "Define Docker mount for book folder"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_book_mount:
+      - source: "{{ calibre_web_docker_book_dir }}"
+        target: "/books"
+        type: "bind"
+
+- name: "Build unified list of Docker mounts"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_mount_list: >
+      {{ _calibre_web_docker_config_mount + _calibre_web_docker_book_mount }}
+
+- name: "Configure ebook conversion"
+  when: "calibre_web_docker_enable_ebook_conversion"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_ebook_conversion: "{{ calibre_web_docker_ebook_conversion_mod_name }}"
+
+- name: "Convert created network into list with a dictionary"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_created_networks:
+      - name: "{{ calibre_web_docker_network }}"
+        ipv4_address: "{{ _calibre_web_docker_network_ipv4 | default(omit) }}"
+        ipv6_address: "{{ _calibre_web_docker_network_ipv6 | default(omit) }}"
+        aliases: "{{ _calibre_web_docker_network_aliases | default(omit) }}"
+  when: "calibre_web_docker_network_create"
+
+- name: "Create placeholder list for created network"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_created_networks: []
+  when: "not calibre_web_docker_network_create"
+
+- name: "Define all Docker networks for this container"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_all_networks: >
+      {{ _calibre_web_docker_created_networks + calibre_web_docker_extra_networks }}
+
+- name: "Build container FQDN"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_fqdn: "{{ calibre_web_docker_hostname }}.{{ calibre_web_docker_host_domain }}"
+
+- name: "Define Docker labels with Traefik disabled"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_labels: "{{ _calibre_web_docker_labels | default({}) |
+      combine({item.key: item.value}) }}"
+  with_items:
+    - key: "traefik.enable"
+      value: "{{ calibre_web_docker_available_externally }}"
+  when: "not calibre_web_docker_available_externally"
+
+# yamllint disable rule:line-length
+- name: "Define Docker labels with Traefik enabled"
+  ansible.builtin.set_fact:
+    _calibre_web_docker_labels: "{{ _calibre_web_docker_labels | default({}) |
+      combine({item.key: item.value}) }}"
+  with_items:
+    - { key: "traefik.enable",  value: "{{ calibre_web_docker_available_externally }}" }
+    # HTTP/HTTPS
+    - { key: "traefik.http.routers.calibre-web.rule", value: "Host(`{{ _calibre_web_docker_fqdn }}`)" }
+    - { key: "traefik.http.routers.calibre-web.entrypoints", value: "http,https" }
+    - { key: "traefik.http.routers.calibre-web.service", value: "calibre-web" }
+    - { key: "traefik.http.routers.calibre-web.tls.certresolver", value: "letsencrypt" }
+    - { key: "traefik.http.routers.calibre-web.tls.domains[0].main", value: "*.{{ calibre_web_docker_host_domain }}" }
+    - { key: "traefik.http.services.calibre-web.loadbalancer.server.port", value: "{{ calibre_web_docker_web_port }}" }
+  when: "calibre_web_docker_available_externally"
+# yamllint enable rule:line-length
+
+- name: "Create Calibre Web Docker container"  # noqa: args[module]
+  community.docker.docker_container:
+    name: "{{ calibre_web_docker_name }}"
+    image: "{{ calibre_web_docker_image_name }}:{{ calibre_web_docker_image_version }}"
+    pull: true
+    mounts: "{{ _calibre_web_docker_mount_list }}"
+    dns_servers: "{{ calibre_web_docker_dns_servers | default(omit) }}"
+    env:
+      "PUID": "{{ calibre_web_docker_uid | default(omit) }}"
+      "PGID": "{{ calibre_web_docker_gid | default(omit) }}"
+      "DOCKER_MODS": "{{ _calibre_web_docker_ebook_conversion | default(omit) }}"
+    network_mode: "{{ calibre_web_docker_network }}"
+    networks: "{{ _calibre_web_docker_all_networks }}"
+    restart_policy: "{{ calibre_web_docker_restart_policy }}"
+    memory: "{{ calibre_web_docker_memory }}"
+    cpus: "{{ calibre_web_docker_cpus }}"
+    container_default_behavior: "no_defaults"
+    auto_remove: false
+    detach: true
+    init: false
+    interactive: false
+    paused: false
+    privileged: false
+    read_only: false
+    tty: false
+    labels: "{{ _calibre_web_docker_labels }}"

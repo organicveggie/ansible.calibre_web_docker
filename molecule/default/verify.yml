@@ -1,10 +1,57 @@
 ---
-# This is an example playbook to execute Ansible tests.
-
-- name: Verify
-  hosts: all
+- name: "Verify"
+  hosts: "all"
   gather_facts: false
+  become: true
+
+  vars:
+    calibre_web_docker_name: "calibre-test-container"
+    calibre_web_docker_volume_name: "calibre-test-volume"
+    calibre_web_docker_network: "calibre-docker-test-network"
+    calibre_web_docker_book_dir: "/var/lib/books"
+
   tasks:
-  - name: Example assertion
-    ansible.builtin.assert:
-      that: true
+    - name: "Get info on conf volume"
+      community.docker.docker_volume_info:
+        name: "{{ calibre_web_docker_volume_name }}"
+      register: "_volume_info_conf"
+
+    - name: "Verify data volume"
+      ansible.builtin.assert:
+        that:
+          - "_volume_info_conf.exists"
+
+    - name: "Get info on default network"
+      community.docker.docker_network_info:
+        name: "{{ calibre_web_docker_network }}"
+      register: "_network_info"
+
+    - name: "Verify default network"
+      ansible.builtin.assert:
+        that:
+          - "_network_info.exists"
+
+    - name: "Get info on container: {{ calibre_web_docker_name }}"
+      community.docker.docker_container_info:
+        name: "{{ calibre_web_docker_name }}"
+      register: "container_info"
+
+    - name: "Verify container exists and is running: {{ calibre_web_docker_name }}"
+      ansible.builtin.assert:
+        that:
+          - "container_info.exists"
+          - "container_info.container['State']['Running']"
+
+    - name: "Extract HostConfig"
+      ansible.builtin.set_fact:
+        _resilio_host_config: "{{ container_info.container['HostConfig'] }}"
+
+    - name: "Verify container is configured correctly"
+      ansible.builtin.assert:
+        that:
+          - "_resilio_host_config['Mounts'][0]['Type'] == 'volume'"
+          - "_resilio_host_config['Mounts'][0]['Source'] == '{{ calibre_web_docker_volume_name }}'"
+          - "_resilio_host_config['Mounts'][0]['Target'] == '/config'"
+          - "_resilio_host_config['Mounts'][1]['Type'] == 'bind'"
+          - "_resilio_host_config['Mounts'][1]['Source'] == '{{ calibre_web_docker_book_dir }}'"
+          - "_resilio_host_config['Mounts'][1]['Target'] == '/books'"
