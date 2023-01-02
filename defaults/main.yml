@@ -52,8 +52,8 @@ calibre_web_docker_gid: null
 #####
 
 # Name of the default Docker network for the container. The container will *always* attach to this
-# network. If [calibre_web_docker_network_create] is true, this is also the name of the network which
-# will be created.
+# network. If [calibre_web_docker_network_create] is true, this is also the name of the network
+# which will be created.
 calibre_web_docker_network: "calibre-web"
 
 # List of additional networks the container should attach to. Elements should be dictionaries like
@@ -89,10 +89,12 @@ calibre_web_docker_network_enable_ipv6: "false"
 # Only used when [calibre_web_docker_network_create] is enabled.
 calibre_web_docker_network_internal: "false"
 
-# Control the default network's scope. Only used when [calibre_web_docker_network_create] is enabled.
+# Control the default network's scope. Only used when [calibre_web_docker_network_create] is
+# enabled.
 calibre_web_docker_network_scope: "local"
 
-# IPv4 subnet for the default network. Only used when [calibre_web_docker_network_create] is enabled.
+# IPv4 subnet for the default network. Only used when [calibre_web_docker_network_create] is
+# enabled.
 calibre_web_docker_network_subnet: "172.1.1.0/24"
 
 # IPv4 gateway for the default network. Only used when [calibre_web_docker_network_create] is
