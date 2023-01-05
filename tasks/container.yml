@@ -53,7 +53,7 @@
 
 - name: "Build container FQDN"
   ansible.builtin.set_fact:
-    _calibre_web_docker_fqdn: >
+    _calibre_web_docker_fqdn: >-
       {{ calibre_web_docker_hostname }}.{{ calibre_web_docker_host_domain }}
 
 - name: "Define Docker labels with Traefik disabled"
